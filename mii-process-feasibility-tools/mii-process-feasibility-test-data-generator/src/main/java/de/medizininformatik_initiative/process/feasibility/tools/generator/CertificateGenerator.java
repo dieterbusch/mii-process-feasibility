@@ -1,10 +1,7 @@
 package de.medizininformatik_initiative.process.feasibility.tools.generator;
 
 import com.google.common.collect.Streams;
-import de.rwh.utils.crypto.CertificateAuthority;
-import de.rwh.utils.crypto.CertificateAuthority.CertificateAuthorityBuilder;
-import de.rwh.utils.crypto.CertificateHelper;
-import de.rwh.utils.crypto.CertificationRequestBuilder;
+import de.rwh.utils.crypto.*;
 import de.rwh.utils.crypto.io.CertificateWriter;
 import de.rwh.utils.crypto.io.CsrIo;
 import de.rwh.utils.crypto.io.PemIo;
@@ -124,12 +121,12 @@ public class CertificateGenerator {
             X509Certificate caCertificate = readCertificate(caCertFile);
             PrivateKey caPrivateKey = readPrivatekey(caPrivateKeyFile);
 
-            return CertificateAuthorityBuilder.create(caCertificate, caPrivateKey).initialize();
+            return CertificateAuthority.CertificateAuthorityBuilder.create(caCertificate, caPrivateKey).initialize();
         } else {
             logger.info("Initializing CA with new cert file: {}, private key {}", caCertFile,
                     caPrivateKeyFile);
 
-            CertificateAuthority ca = CertificateAuthorityBuilder.create("DE", null, null,
+            CertificateAuthority ca = CertificateAuthority.CertificateAuthorityBuilder.create("DE", null, null,
                             null, null, "Test")
                     .initialize();
 

@@ -1,6 +1,7 @@
 package de.medizininformatik_initiative.process.feasibility.service;
 
 import de.medizininformatik_initiative.process.feasibility.EvaluationSettingsProvider;
+import de.medizininformatik_initiative.process.feasibility.util.StaleTaskException;
 import dev.dsf.bpe.v1.ProcessPluginApi;
 import dev.dsf.bpe.v1.activity.AbstractServiceDelegate;
 import dev.dsf.bpe.v1.variables.Target;
@@ -11,7 +12,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -20,21 +24,22 @@ import static de.medizininformatik_initiative.process.feasibility.variables.Cons
 import static de.medizininformatik_initiative.process.feasibility.variables.ConstantsFeasibility.CODESYSTEM_FEASIBILITY_VALUE_MEASURE_REFERENCE;
 import static dev.dsf.common.auth.conf.Identity.ORGANIZATION_IDENTIFIER_SYSTEM;
 
-// TODO Überladen
 public class SelectRequestTargets extends AbstractServiceDelegate {
 
     private static final Logger logger = LoggerFactory.getLogger(SelectRequestTargets.class);
     private final EvaluationSettingsProvider evaluationSettingsProvider;
+    private Duration taskRequestTimeout;
 
-    public SelectRequestTargets(ProcessPluginApi api, EvaluationSettingsProvider evaluationSettingsProvider) {
+    public SelectRequestTargets(ProcessPluginApi api, EvaluationSettingsProvider evaluationSettingsProvider, Duration taskRequestTimeout) {
         super(api);
         this.evaluationSettingsProvider = evaluationSettingsProvider;
+        this.taskRequestTimeout = taskRequestTimeout;
     }
 
     @Override
     protected void doExecute(DelegateExecution execution, Variables variables) {
         logger.info("doExecute select request targets");
-
+        var startTask = checkRequestDate(variables.getStartTask());
 
         var client = api.getFhirWebserviceClientProvider().getLocalWebserviceClient();
         var parentIdentifier = new Identifier()
@@ -73,9 +78,35 @@ public class SelectRequestTargets extends AbstractServiceDelegate {
 
         variables.setString("measure-id",
                 api.getFhirWebserviceClientProvider().getLocalWebserviceClient().getBaseUrl()
-                        + getMeasureId(variables.getStartTask()));
+                        + getMeasureId(startTask));
     }
-
+    private Task checkRequestDate(Task task) {
+        var historyBundle = api.getFhirWebserviceClientProvider().getLocalWebserviceClient().history(Task.class,
+                task.getIdElement().getIdPart());
+        var requestDate = historyBundle.getEntry().stream()
+                .filter(entry -> entry.getResource() instanceof Task)
+                .map(entry -> (Task) entry.getResource())
+                .filter(t -> t.getStatus() == Task.TaskStatus.REQUESTED)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("No requested task found in history for task: %s"
+                        .formatted(task.getIdElement().toVersionless().getValue())))
+                .getMeta()
+                .getLastUpdated()
+                .toInstant();
+        var currentDate = Instant.now();
+        if (requestDate.isBefore(currentDate.minus(taskRequestTimeout))) {
+            var taskId = api.getTaskHelper().getLocalVersionlessAbsoluteUrl(task);
+            logger.error(
+                    "Task was requested too long ago [task: {}, request date: {}, current date: {}, request timeout: {}]",
+                    taskId,
+                    DateTimeFormatter.ISO_INSTANT.format(requestDate),
+                    DateTimeFormatter.ISO_INSTANT.format(currentDate),
+                    taskRequestTimeout);
+            throw new StaleTaskException(taskId, requestDate, currentDate, taskRequestTimeout);
+        } else {
+            return task;
+        }
+    }
     private String getMeasureId(Task task) {
 
         Optional<Reference> measureRef = api.getTaskHelper()
@@ -85,7 +116,8 @@ public class SelectRequestTargets extends AbstractServiceDelegate {
         if (measureRef.isPresent()) {
             return measureRef.get().getReference();
         } else {
-            logger.error("Task {} is missing the measure reference.", task.getId());
+            logger.error("Task is missing the measure reference [task: {}]",
+                    api.getTaskHelper().getLocalVersionlessAbsoluteUrl(task));
             throw new RuntimeException("Missing measure reference.");
         }
     }

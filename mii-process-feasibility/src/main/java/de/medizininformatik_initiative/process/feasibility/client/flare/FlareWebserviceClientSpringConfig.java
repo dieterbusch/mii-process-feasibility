@@ -2,9 +2,10 @@ package de.medizininformatik_initiative.process.feasibility.client.flare;
 
 import de.medizininformatik_initiative.process.feasibility.EvaluationSettingsProvider;
 import de.medizininformatik_initiative.process.feasibility.EvaluationStrategy;
-import de.medizininformatik_initiative.process.feasibility.client.store.TlsClientFactory;
+import de.medizininformatik_initiative.process.feasibility.client.store.StoreClientFactory;
 import de.medizininformatik_initiative.process.feasibility.spring.config.BaseConfig;
 import de.medizininformatik_initiative.process.feasibility.spring.config.EvaluationConfig;
+import dev.dsf.bpe.v1.documentation.ProcessDocumentation;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.auth.AuthScope;
@@ -22,6 +23,8 @@ import org.apache.http.impl.client.ProxyAuthenticationStrategy;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HttpContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -44,9 +47,19 @@ import static java.lang.String.format;
 @Import({ BaseConfig.class, EvaluationConfig.class })
 public class FlareWebserviceClientSpringConfig {
 
+    private static final Logger logger = LoggerFactory.getLogger(FlareWebserviceClientSpringConfig.class);
+
+    @ProcessDocumentation(
+            processNames = { "medizininformatik-initiativede_feasibilityExecute" },
+            description = "The base URL of the Flare service",
+            required = true,
+            example = "https://flare.example.org")
     @Value("${de.medizininformatik_initiative.feasibility_dsf_process.client.flare.base_url:}")
     private String flareBaseUrl;
 
+    @ProcessDocumentation(
+            processNames = { "medizininformatik-initiativede_feasibilityExecute" },
+            description = "The timeout in milliseconds for connecting to the Flare service and waiting for a response")
     @Value("${de.medizininformatik_initiative.feasibility_dsf_process.client.flare.timeout.connect:" + CLIENT_TIMEOUT_DEFAULT + "}")
     private int connectTimeout;
 
@@ -100,7 +113,10 @@ public class FlareWebserviceClientSpringConfig {
     public HttpClient flareHttpClient(@Qualifier("base-client") SSLContext sslContext,
                                       EvaluationSettingsProvider evaluationSettingsProvider) {
         if (EvaluationStrategy.STRUCTURED_QUERY == evaluationSettingsProvider.evaluationStrategy()) {
-            var clientFactory = new TlsClientFactory(null, sslContext);
+            logger.info("Setting up store client for indirect access over flare using {}.",
+                    EvaluationStrategy.STRUCTURED_QUERY);
+
+            var clientFactory = new StoreClientFactory(null, sslContext);
             clientFactory.setConnectTimeout(connectTimeout);
             clientFactory.setConnectionRequestTimeout(connectTimeout);
             clientFactory.setSocketTimeout(connectTimeout);
@@ -111,17 +127,23 @@ public class FlareWebserviceClientSpringConfig {
             if (!isNullOrEmpty(proxyHost) && proxyPort != null) {
                 var proxy = new HttpHost(proxyHost, proxyPort);
                 builder.setProxy(proxy);
+                logger.info("Setting proxy (host: '{}', port: '{}') for store client.", proxyHost, proxyPort);
                 if (!isNullOrEmpty(proxyUsername) && !isNullOrEmpty(proxyPassword)) {
+                    logger.info("Setting proxy credentials (username: '{}', password: '***') for store client.",
+                            proxyUsername);
                     builder.setProxyAuthenticationStrategy(new ProxyAuthenticationStrategy());
                     credentialsProvider.setCredentials(new AuthScope(proxy),
                             new UsernamePasswordCredentials(proxyUsername, proxyPassword));
                 }
             }
             if (!isNullOrEmpty(basicAuthUsername) && !isNullOrEmpty(basicAuthPassword)) {
+                logger.info("Setting basic authentication (username: '{}', password: '***') for store client.",
+                        basicAuthUsername);
                 var flareUri = URI.create(flareBaseUrl);
                 credentialsProvider.setCredentials(new AuthScope(new HttpHost(flareUri.getHost(), flareUri.getPort())),
                         new UsernamePasswordCredentials(basicAuthUsername, basicAuthPassword));
             } else if (!isNullOrEmpty(bearerAuthToken)) {
+                logger.info("Setting bearer token '***' for store client.");
                 return new BearerHttpClient(builder.setDefaultCredentialsProvider(credentialsProvider).build());
             }
             return builder.setDefaultCredentialsProvider(credentialsProvider).build();

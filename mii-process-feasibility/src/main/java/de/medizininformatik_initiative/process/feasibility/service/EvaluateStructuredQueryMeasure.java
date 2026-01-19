@@ -6,16 +6,21 @@ import dev.dsf.bpe.v1.ProcessPluginApi;
 import dev.dsf.bpe.v1.activity.AbstractServiceDelegate;
 import dev.dsf.bpe.v1.variables.Variables;
 import org.camunda.bpm.engine.delegate.DelegateExecution;
-import org.hl7.fhir.r4.model.Library;
-import org.hl7.fhir.r4.model.Measure;
+import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupComponent;
+import org.hl7.fhir.r4.model.MeasureReport.MeasureReportGroupPopulationComponent;
 import org.springframework.beans.factory.InitializingBean;
 
 import java.io.IOException;
+import java.util.Date;
+import java.util.List;
 import java.util.Objects;
 
 import static de.medizininformatik_initiative.process.feasibility.variables.ConstantsFeasibility.*;
+import static org.hl7.fhir.r4.model.MeasureReport.MeasureReportStatus.COMPLETE;
+import static org.hl7.fhir.r4.model.MeasureReport.MeasureReportType.SUMMARY;
 
 public class EvaluateStructuredQueryMeasure extends AbstractServiceDelegate implements InitializingBean, MeasureReportGenerator {
     private static final Logger logger = LoggerFactory.getLogger(EvaluateStructuredQueryMeasure.class);
@@ -42,10 +47,11 @@ public class EvaluateStructuredQueryMeasure extends AbstractServiceDelegate impl
 
         var library = (Library) variables.getResource(VARIABLE_LIBRARY);
         var measure = (Measure) variables.getResource(VARIABLE_MEASURE);
-
         var structuredQuery = getStructuredQuery(library);
-        var feasibility = getFeasibility(structuredQuery);
-        var measureReport = buildMeasureReport(measure.getUrl(), feasibility);
+
+        var feasibility = getFeasibility(structuredQuery, measure, variables.getStartTask());
+
+        var measureReport = buildMeasureReport(feasibility);
 
         variables.setResource(VARIABLE_MEASURE_REPORT, measureReport);
     }
@@ -58,8 +64,42 @@ public class EvaluateStructuredQueryMeasure extends AbstractServiceDelegate impl
                 .getData();
     }
 
-    private int getFeasibility(byte[] structuredQuery) throws IOException, InterruptedException {
-        return flareClient.requestFeasibility(structuredQuery);
+    private int getFeasibility(byte[] structuredQuery, Measure measure, Task task)
+            throws IOException, InterruptedException {
+        logger.debug("Start evaluating Measure '{}' [task: {}]", measure.getId(),
+                api.getTaskHelper().getLocalVersionlessAbsoluteUrl(task));
+        var startTime = System.currentTimeMillis();
+
+        var feasibilityCount = flareClient.requestFeasibility(structuredQuery);
+
+        var durationSeconds = (System.currentTimeMillis() - startTime) / 1000.0d;
+        logger.debug("Finished evaluating Measure '{}' (total execution time: {}s) [task: {}]",
+                measure.getId(), "%.3f".formatted(durationSeconds),
+                api.getTaskHelper().getLocalVersionlessAbsoluteUrl(task));
+
+        return feasibilityCount;
     }
 
+    private MeasureReport buildMeasureReport(int feasibility) {
+        var measureReport = new MeasureReport()
+                .setStatus(COMPLETE)
+                .setType(SUMMARY)
+                .setDate(new Date())
+                .setPeriod(new Period()
+                        .setStart(MEASURE_REPORT_PERIOD_START)
+                        .setEnd(MEASURE_REPORT_PERIOD_END));
+
+        var populationGroup = new MeasureReportGroupPopulationComponent()
+                .setCount(feasibility)
+                .setCode(new CodeableConcept()
+                        .addCoding(new Coding()
+                                .setSystem(CODESYSTEM_MEASURE_POPULATION)
+                                .setCode(CODESYSTEM_MEASURE_POPULATION_VALUE_INITIAL_POPULATION)));
+
+        measureReport.getGroup()
+                .add(new MeasureReportGroupComponent()
+                        .setPopulation(List.of(populationGroup)));
+
+        return measureReport;
+    }
 }
