@@ -4,7 +4,7 @@
 
     <groupId>de.medizininformatik-initiative</groupId>
     <artifactId>mii-process-feasibility-parent</artifactId>
-    <version>1.0.0.9</version>
+    <version>1.0.0.11</version>
     <packaging>pom</packaging>
 
     <modules>
@@ -18,7 +18,7 @@
         <compileTarget>17</compileTarget>
         <dsf.version>1.8.0</dsf.version>
         <hapi.fhir.version>5.2.1</hapi.fhir.version>
-        <testcontainers.version>1.21.3</testcontainers.version>
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <name>MII Processes Feasibility</name>

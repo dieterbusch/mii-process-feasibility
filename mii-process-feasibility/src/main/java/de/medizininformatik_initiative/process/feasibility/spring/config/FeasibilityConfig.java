@@ -76,8 +76,8 @@ public class FeasibilityConfig {
 
     @Bean
     @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public DownloadMeasureReport downloadMeasureReport(EnhancedFhirWebserviceClientProvider enhancedFhirClientProvider) {
-        return new DownloadMeasureReport(enhancedFhirClientProvider, api);
+    public DownloadMeasureReport downloadMeasureReport() {
+        return new DownloadMeasureReport(api);
     }
 
     @Bean
@@ -123,9 +123,8 @@ public class FeasibilityConfig {
 
     @Bean
     @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
-    public DownloadFeasibilityResources downloadFeasibilityResources(
-            EnhancedFhirWebserviceClientProvider enhancedFhirClientProvider) {
-        return new DownloadFeasibilityResources(enhancedFhirClientProvider, api);
+    public DownloadFeasibilityResources downloadFeasibilityResources() {
+        return new DownloadFeasibilityResources(api);
     }
 
     @Bean
