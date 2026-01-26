@@ -74,6 +74,8 @@ public class StoreFeasibilityResources extends AbstractServiceDelegate implement
             var libraryUrl = base + "/Library/" + libraryId;
             measure.setLibrary(new ArrayList<>());
             measure.addLibrary(libraryUrl);
+            measure.setDescription(measureId);
+            measure.setName(null);
             library.setUrl(libraryUrl);
             library.setName(libraryId);
             library.setVersion("1.0.0");

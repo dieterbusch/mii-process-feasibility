@@ -4,6 +4,7 @@ import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -39,7 +40,8 @@ public interface StoreBundleProvider {
             var libraryUrl = base + "/Library/" + libraryId;
             measure.setLibrary(new java.util.ArrayList<>());
             measure.addLibrary(libraryUrl);
-            measure.setName(measureId);
+            measure.setDescription(measureId);
+            measure.setName(null);
             library.setUrl(libraryUrl);
             library.setName(libraryId);
             library.setVersion("1.0.0");
