@@ -7,7 +7,7 @@
     <parent>
         <groupId>de.medizininformatik-initiative</groupId>
         <artifactId>mii-process-feasibility-tools</artifactId>
-        <version>1.0.0.1</version>
+        <version>1.0.0.11</version>
     </parent>
 
     <name>MII Process Feasibility Test Data Generator</name>
@@ -38,6 +38,10 @@
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
             <artifactId>hapi-fhir-structures-r4</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>de.hs-heilbronn.mi</groupId>
+            <artifactId>crypto-utils</artifactId>
         </dependency>
     </dependencies>
 

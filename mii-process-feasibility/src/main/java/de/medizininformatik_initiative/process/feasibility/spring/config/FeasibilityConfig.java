@@ -9,7 +9,6 @@ import de.medizininformatik_initiative.process.feasibility.message.SendDicRespon
 import de.medizininformatik_initiative.process.feasibility.service.*;
 import dev.dsf.bpe.v1.ProcessPluginApi;
 import dev.dsf.bpe.v1.documentation.ProcessDocumentation;
-import dev.dsf.bpe.v1.service.FhirWebserviceClientProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,8 +24,7 @@ public class FeasibilityConfig {
 
     private final IGenericClient storeClient;
 
-    @Autowired
-    private ProcessPluginApi api;
+    @Autowired private ProcessPluginApi api;
 
     private final EvaluationSettingsProvider evaluationSettingsProvider;
     private final FlareWebserviceClient flareWebserviceClient;
@@ -43,12 +41,6 @@ public class FeasibilityConfig {
         this.storeClient = storeClient;
         this.evaluationSettingsProvider = evaluationSettingsProvider;
         this.flareWebserviceClient = flareWebserviceClient;
-    }
-
-    @Bean
-    public EnhancedFhirWebserviceClientProvider enhancedFhirClientProvider(
-            @Qualifier("clientProvider") FhirWebserviceClientProvider fhirClientProvider) {
-        return new EnhancedFhirWebserviceClientProviderImpl(fhirClientProvider);
     }
 
     @Bean
