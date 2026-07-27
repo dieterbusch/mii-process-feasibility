@@ -4,7 +4,6 @@ import org.hl7.fhir.r4.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -64,8 +63,7 @@ public interface StoreBundleProvider {
                     .map(bundleEntryComponent -> bundleEntryComponent.getResource().getIdElement().getIdPart())
                     .orElse(null);
         } catch (Exception e) {
-            logger.error("General Exception: " + e.getMessage(), e);
-            e.printStackTrace();
+            logger.error("General Exception: {}", e.getMessage(), e);
         }
         return null;
     }

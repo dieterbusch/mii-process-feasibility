@@ -19,7 +19,7 @@ public class StoreFeasibilityResourcesLocally extends AbstractServiceDelegate im
 
     private static final Logger logger = LoggerFactory.getLogger(StoreFeasibilityResourcesLocally.class);
 
-    private FhirWebserviceClient localWebserviceClient;
+    private final FhirWebserviceClient localWebserviceClient;
 
     public StoreFeasibilityResourcesLocally(ProcessPluginApi api) {
         super(api);
@@ -59,6 +59,7 @@ public class StoreFeasibilityResourcesLocally extends AbstractServiceDelegate im
     @Override
     public Bundle storeBundle(Bundle bundle) {
         fixRequest(bundle.getEntry());
+        logger.info("Store (StoreFeasibilityResourcesLocally.storeBundle) client base URL: {}", localWebserviceClient.getBaseUrl());
         return localWebserviceClient.postBundle(bundle);
     }
 

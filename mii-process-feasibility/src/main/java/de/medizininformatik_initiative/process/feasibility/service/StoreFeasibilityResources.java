@@ -92,6 +92,7 @@ public class StoreFeasibilityResources extends AbstractServiceDelegate implement
         Bundle bundle = new Bundle().setType(TRANSACTION);
         bundle.addEntry().setResource(measure).getRequest().setMethod(POST).setUrl("Measure");
         bundle.addEntry().setResource(library).getRequest().setMethod(POST).setUrl("Library");
+        logger.info("Store (StoreFeasibilityResources.storeResources) client base URL: {}", storeClient.getServerBase());
         return storeClient.transaction().withBundle(bundle).execute();
     }
 
